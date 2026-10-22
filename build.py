@@ -4,7 +4,10 @@
 portfolio.html 用 <script src="data.js"> 載入結果。這支程式只讀 summary，
 永遠不碰 raw/ 和 context.md（設計文件 §9）。只用 Python 標準函式庫。
 
-用法：python3 build.py [--projects DIR] [--out FILE]
+它也是去敏感化的第二道防線：任何 summary 裡只要還出現 redactions.md
+「原文」欄的字串，就拒絕 build，舊的 data.js 保持不動（設計文件 §7）。
+
+用法：python3 build.py [--projects DIR] [--out FILE] [--redactions FILE]
 """
 
 import argparse
@@ -87,6 +90,44 @@ def scan_projects(projects_dir):
     return projects
 
 
+def load_originals(path):
+    """Return the first cell of every row in the `redactions.md` table.
+
+    The header row (`原文`) and the `|---|` separator are skipped, as are
+    empty cells. A missing file returns an empty list.
+    """
+    path = Path(path)
+    if not path.is_file():
+        return []
+    originals = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line.startswith("|"):
+            continue
+        cell = line.strip("|").split("|")[0].strip()
+        if cell and cell != "原文" and not set(cell) <= set("-: "):
+            originals.append(cell)
+    return originals
+
+
+def find_leaks(projects_dir, originals):
+    """Find every exact occurrence of an original term in the summaries.
+
+    Scans the full text, frontmatter included, of `summary.md` and
+    `summary.en.md` in every project folder (`_` folders too, so the example
+    cannot leak either). Returns `(file, line, term)` with 1-based lines.
+    """
+    leaks = []
+    for folder in sorted(Path(projects_dir).iterdir()):
+        for name in ("summary.md", "summary.en.md"):
+            path = folder / name
+            if not path.is_file():
+                continue
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                leaks.extend((path, number, term) for term in originals if term in line)
+    return leaks
+
+
 def write_data_js(projects, out, built_at):
     """Write `window.PORTFOLIO = {...};` to `out`."""
     payload = {"builtAt": built_at, "projects": projects}
@@ -113,10 +154,18 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="把 summary 打包成 data.js")
     parser.add_argument("--projects", type=Path, default=HERE / "projects")
     parser.add_argument("--out", type=Path, default=HERE / "data.js")
+    parser.add_argument("--redactions", type=Path, default=HERE / "redactions.md")
     args = parser.parse_args(argv)
 
     if not args.projects.is_dir():
         print(f"找不到資料夾：{args.projects}", file=sys.stderr)
+        return 1
+    leaks = find_leaks(args.projects, load_originals(args.redactions))
+    if leaks:
+        for path, number, term in leaks:
+            print(f"{path}:{number}: 發現原文「{term}」", file=sys.stderr)
+        print("summary 裡還有未替換的原文，沒有更新 data.js。請先修正上面的檔案再 build。",
+              file=sys.stderr)
         return 1
     projects = scan_projects(args.projects)
     write_data_js(projects, args.out, datetime.now().astimezone().isoformat(timespec="seconds"))

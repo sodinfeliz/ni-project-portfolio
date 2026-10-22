@@ -1,3 +1,5 @@
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -8,6 +10,11 @@ from pathlib import Path
 import build
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "projects"
+
+
+def run_main(*args):
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        return build.main(list(args))
 
 
 def read_portfolio(path: Path) -> dict:
@@ -79,12 +86,62 @@ class MainTests(unittest.TestCase):
     def test_main_writes_data_js(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "data.js"
-            code = build.main(["--projects", str(FIXTURES), "--out", str(out)])
+            code = run_main("--projects", str(FIXTURES), "--out", str(out),
+                            "--redactions", str(Path(tmp) / "none.md"))
             self.assertEqual(code, 0)
             data = read_portfolio(out)
             self.assertIn("builtAt", data)
             self.assertEqual(len(data["projects"]), 3)
             self.assertNotIn("CONTEXT-ONLY-SECRET", out.read_text(encoding="utf-8"))
+
+
+REDACTIONS = """# 敏感詞對照表
+
+| 原文 | 中文代稱 | English |
+|---|---|---|
+| 國泰人壽 | 某金融客戶 | a client |
+| 月營收 3,200 萬 | 月營收數千萬等級 | revenue in the tens of millions |
+|  | 空白列 | blank |
+"""
+
+
+class LeakTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp)
+        self.redactions = self.tmp / "redactions.md"
+        self.redactions.write_text(REDACTIONS, encoding="utf-8")
+        self.projects = self.tmp / "projects"
+        project = self.projects / "leaky"
+        project.mkdir(parents=True)
+        (project / "summary.md").write_text("---\ntitle: 安全的標題\n---\n內容\n", encoding="utf-8")
+        self.en = project / "summary.en.md"
+        self.en.write_text("---\ntitle: 國泰人壽 app\n---\nbody\n", encoding="utf-8")
+
+    def test_load_originals(self):
+        self.assertEqual(build.load_originals(self.redactions), ["國泰人壽", "月營收 3,200 萬"])
+
+    def test_load_originals_missing_file(self):
+        self.assertEqual(build.load_originals(self.tmp / "nope.md"), [])
+
+    def test_leak_in_en_title(self):
+        leaks = build.find_leaks(self.projects, ["國泰人壽"])
+        self.assertEqual(leaks, [(self.en, 2, "國泰人壽")])
+
+    def test_main_refuses_on_leak(self):
+        out = self.tmp / "data.js"
+        out.write_text("OLD", encoding="utf-8")
+        code = run_main("--projects", str(self.projects), "--out", str(out),
+                        "--redactions", str(self.redactions))
+        self.assertEqual(code, 1)
+        self.assertEqual(out.read_text(encoding="utf-8"), "OLD")
+
+    def test_no_redactions_file(self):
+        out = self.tmp / "data.js"
+        code = run_main("--projects", str(self.projects), "--out", str(out),
+                        "--redactions", str(self.tmp / "nope.md"))
+        self.assertEqual(code, 0)
+        self.assertTrue(out.read_text(encoding="utf-8").startswith("window.PORTFOLIO"))
 
 
 if __name__ == "__main__":
