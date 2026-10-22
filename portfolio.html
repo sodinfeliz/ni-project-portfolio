@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>專案作品集</title>
+<style>
+  :root {
+    --bg: #fbfaf8;
+    --panel: #f3f1ec;
+    --text: #23211d;
+    --muted: #6f6a61;
+    --line: #e2ded5;
+    --accent: #2f6f62;
+    --accent-soft: #e3efeb;
+    --todo-bg: #fff1c7;
+    --todo-text: #7a5300;
+    --redacted-bg: #e8e4f4;
+    --warn-bg: #fdecea;
+    --warn-text: #8a2a1f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1c1e;
+      --panel: #232427;
+      --text: #e7e5e0;
+      --muted: #9b978f;
+      --line: #34363a;
+      --accent: #7cc4b3;
+      --accent-soft: #24332f;
+      --todo-bg: #4a3a12;
+      --todo-text: #f5d58a;
+      --redacted-bg: #3a3550;
+      --warn-bg: #45231f;
+      --warn-text: #f2b3aa;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.75 -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  }
+  .app { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    padding: 24px 12px;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  nav h1 { font-size: 15px; margin: 0 12px 16px; color: var(--muted); font-weight: 600; letter-spacing: .04em; }
+  nav ul { list-style: none; margin: 0; padding: 0; flex: 1; }
+  nav li + li { margin-top: 4px; }
+  nav button {
+    all: unset;
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  nav button:hover { background: var(--line); }
+  nav button:focus-visible { outline: 2px solid var(--accent); }
+  nav li.active button { background: var(--accent-soft); color: var(--accent); }
+  nav .title { display: block; font-weight: 600; font-size: 15px; }
+  nav .sub { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  nav li.pending .title { color: var(--muted); font-weight: 400; }
+  .badge { background: var(--todo-bg); color: var(--todo-text); border-radius: 999px; padding: 0 8px; font-size: 11px; }
+  nav footer { font-size: 12px; color: var(--muted); padding: 16px 12px 0; border-top: 1px solid var(--line); margin-top: 16px; }
+  main { padding: 32px 48px 80px; max-width: 860px; width: 100%; }
+  .topbar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+  .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .lang button { all: unset; cursor: pointer; padding: 4px 14px; font-size: 13px; color: var(--muted); }
+  .lang button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+  .lang button:focus-visible { outline: 2px solid var(--accent); }
+  article h1 { font-size: 28px; line-height: 1.3; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .meta .tag { background: var(--panel); border-radius: 6px; padding: 1px 8px; margin-left: 6px; }
+  .banner { background: var(--warn-bg); color: var(--warn-text); border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; font-size: 14px; }
+  .lead { background: var(--accent-soft); border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; font-size: 17px; }
+  .lead > :first-child { margin-top: 0; } .lead > :last-child { margin-bottom: 0; }
+  .lead blockquote { border: 0; padding: 0; margin: 0; color: var(--text); }
+  details { border-top: 1px solid var(--line); padding: 4px 0; }
+  details summary { cursor: pointer; font-size: 19px; font-weight: 700; padding: 10px 0; list-style-position: inside; }
+  details summary::marker { color: var(--muted); }
+  .body { padding-bottom: 8px; }
+  .body h3, .body h4 { font-size: 16px; margin: 18px 0 6px; }
+  blockquote { border-left: 3px solid var(--line); margin: 12px 0; padding: 0 14px; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 12px 0; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel); }
+  code { background: var(--panel); border-radius: 4px; padding: 1px 5px; font-size: .9em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  mark.todo { background: var(--todo-bg); color: var(--todo-text); border-radius: 4px; padding: 1px 6px; font-weight: 600; }
+  span.redacted { background: var(--redacted-bg); border-radius: 4px; padding: 0 4px; cursor: help; }
+  .empty { color: var(--muted); padding: 48px 0; }
+  .empty code { color: var(--text); }
+  @media (max-width: 720px) {
+    .app { grid-template-columns: 1fr; }
+    nav { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 16px 8px; }
+    main { padding: 20px 16px 64px; }
+    article h1 { font-size: 23px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav>
+    <h1>專案作品集</h1>
+    <ul id="list"></ul>
+    <footer id="built"></footer>
+  </nav>
+  <main>
+    <div class="topbar">
+      <div class="lang" role="group" aria-label="語言">
+        <button type="button" data-lang="zh">中</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+    </div>
+    <article id="reader"></article>
+  </main>
+</div>
+<script src="data.js"></script>
+<script>
+"use strict";
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+// Inline markup on one line of text. Escapes first, so summary text can never become HTML.
+function renderInline(text) {
+  const codes = [];
+  let s = escapeHtml(text).replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return "\u0000" + (codes.length - 1) + "\u0000"; });
+  s = s.replace(/\[\[(待補充：|TODO:)\s*([^\]]*)\]\]/g, (_, kind, body) =>
+    '<mark class="todo">' + (kind === "TODO:" ? "TODO: " : "待補充：") + body + "</mark>");
+  s = s.replace(/\{\{([^}]+)\}\}/g, '<span class="redacted" title="已替換">$1</span>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => "<code>" + codes[i] + "</code>");
+}
+
+function splitRow(line) {
+  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(c => c.trim());
+}
+
+function renderMarkdown(md) {
+  const lines = String(md).replace(/\r\n?/g, "\n").split("\n");
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) { i++; continue; }
+    const heading = line.match(/^(#{1,6})\s+(.*)$/);
+    if (heading) {
+      const level = Math.min(heading[1].length + 1, 6);
+      out.push(`<h${level}>${renderInline(heading[2])}</h${level}>`);
+      i++;
+      continue;
+    }
+    if (/^>\s?/.test(line)) {
+      const quote = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) quote.push(lines[i++].replace(/^>\s?/, ""));
+      out.push("<blockquote>" + renderMarkdown(quote.join("\n")) + "</blockquote>");
+      continue;
+    }
+    if (/^\s*\|/.test(line) && i + 1 < lines.length && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1])) {
+      const head = splitRow(line);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(splitRow(lines[i++]));
+      out.push("<table><thead><tr>" + head.map(c => "<th>" + renderInline(c) + "</th>").join("") +
+        "</tr></thead><tbody>" + rows.map(r => "<tr>" + r.map(c => "<td>" + renderInline(c) + "</td>").join("") + "</tr>").join("") +
+        "</tbody></table>");
+      continue;
+    }
+    const listItem = /^\s*([-*]|\d+\.)\s+/;
+    if (listItem.test(line)) {
+      const ordered = /^\s*\d+\./.test(line);
+      const items = [];
+      while (i < lines.length && listItem.test(lines[i])) {
+        let item = lines[i++].replace(listItem, "");
+        while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !listItem.test(lines[i])) item += " " + lines[i++].trim();
+        items.push("<li>" + renderInline(item) + "</li>");
+      }
+      out.push((ordered ? "<ol>" : "<ul>") + items.join("") + (ordered ? "</ol>" : "</ul>"));
+      continue;
+    }
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|>|\s*\||\s*([-*]|\d+\.)\s)/.test(lines[i])) para.push(lines[i++].trim());
+    if (!para.length) para.push(lines[i++].trim());
+    out.push("<p>" + renderInline(para.join(" ")) + "</p>");
+  }
+  return out.join("\n");
+}
+
+// Text before the first "## " is the lead (elevator pitch); each "## " starts a section.
+function splitSections(md) {
+  const lead = [];
+  const sections = [];
+  for (const line of String(md).replace(/\r\n?/g, "\n").split("\n")) {
+    const h = line.match(/^##\s+(.*)$/);
+    if (h) sections.push({ title: h[1].trim(), body: [] });
+    else (sections.length ? sections[sections.length - 1].body : lead).push(line);
+  }
+  return { lead: lead.join("\n").trim(), sections: sections.map(s => ({ title: s.title, body: s.body.join("\n").trim() })) };
+}
+
+const STORE_KEY = "portfolio.lang";
+const data = window.PORTFOLIO;
+let lang = "zh";
+try { if (localStorage.getItem(STORE_KEY) === "en") lang = "en"; } catch (e) { /* storage unavailable */ }
+
+function formatTime(iso) {
+  const m = String(iso || "").match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+  return m ? m[1] + " " + m[2] : String(iso || "");
+}
+
+function currentSlug() {
+  let slug = "";
+  try { slug = decodeURIComponent(location.hash.slice(1)); } catch (e) { slug = ""; }
+  const found = data.projects.find(p => p.slug === slug);
+  if (found) return found.slug;
+  const first = data.projects.find(p => p.status === "ready") || data.projects[0];
+  return first ? first.slug : "";
+}
+
+function entryFor(project) {
+  return project[lang] || null;
+}
+
+function renderList(active) {
+  const list = document.getElementById("list");
+  list.innerHTML = data.projects.map(p => {
+    const entry = entryFor(p) || p.zh;
+    const title = entry ? entry.meta.title : p.slug;
+    const period = entry && entry.meta.period ? `<span>${escapeHtml(entry.meta.period)}</span>` : "";
+    const own = entryFor(p);
+    const badge = p.status === "pending" ? "<span>尚未生成</span>"
+      : own && own.todos > 0 ? `<span class="badge">缺 ${own.todos} 項</span>` : "";
+    const classes = [p.status === "pending" ? "pending" : "", p.slug === active ? "active" : ""].join(" ").trim();
+    return `<li class="${classes}"><button type="button" data-slug="${escapeHtml(p.slug)}">` +
+      `<span class="title">${escapeHtml(title)}</span><span class="sub">${period}${badge}</span></button></li>`;
+  }).join("");
+}
+
+function renderReader(slug) {
+  const reader = document.getElementById("reader");
+  const project = data.projects.find(p => p.slug === slug);
+  if (!project) {
+    reader.innerHTML = '<p class="empty">還沒有任何專案。在 <code>projects/</code> 裡建立一個專案資料夾，再請 Claude Code 「整理 &lt;專案名&gt;」。</p>';
+    return;
+  }
+  if (project.status === "pending") {
+    reader.innerHTML = `<h1>${escapeHtml(project.slug)}</h1><p class="empty">這個專案還沒有概要。對 Claude Code 說「整理 ${escapeHtml(project.slug)}」就會開始。</p>`;
+    return;
+  }
+  const entry = entryFor(project);
+  const banners = [];
+  if (lang === "en" && !entry) banners.push("英文版尚未生成，先顯示中文版。");
+  else if (lang === "en" && project.enStale) banners.push("英文版比中文版舊，請重新生成。");
+  const shown = entry || project.zh;
+  const meta = shown.meta;
+  const tags = Array.isArray(meta.tags) ? meta.tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("") : "";
+  const parts = splitSections(shown.body);
+  reader.innerHTML =
+    banners.map(b => `<div class="banner">${escapeHtml(b)}</div>`).join("") +
+    `<h1>${escapeHtml(meta.title)}</h1>` +
+    `<div class="meta">${escapeHtml(meta.period || "")}${tags}</div>` +
+    (parts.lead ? `<div class="lead">${renderMarkdown(parts.lead)}</div>` : "") +
+    parts.sections.map(s => `<details open><summary>${renderInline(s.title)}</summary><div class="body">${renderMarkdown(s.body)}</div></details>`).join("");
+}
+
+function render() {
+  const slug = currentSlug();
+  renderList(slug);
+  renderReader(slug);
+  document.documentElement.lang = lang === "en" ? "en" : "zh-Hant";
+  for (const b of document.querySelectorAll(".lang button")) b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
+}
+
+function init() {
+  if (!data || !Array.isArray(data.projects)) {
+    document.body.innerHTML = '<main><p class="empty">找不到 data.js，請先在這個資料夾執行 <code>python3 build.py</code>。</p></main>';
+    return;
+  }
+  document.getElementById("built").textContent = "更新：" + formatTime(data.builtAt);
+  document.getElementById("list").addEventListener("click", e => {
+    const button = e.target.closest("button[data-slug]");
+    if (button) location.hash = encodeURIComponent(button.dataset.slug);
+  });
+  for (const b of document.querySelectorAll(".lang button")) {
+    b.addEventListener("click", () => {
+      lang = b.dataset.lang;
+      try { localStorage.setItem(STORE_KEY, lang); } catch (e) { /* storage unavailable */ }
+      render();
+    });
+  }
+  window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); });
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
