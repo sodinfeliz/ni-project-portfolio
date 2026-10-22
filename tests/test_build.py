@@ -147,5 +147,67 @@ class LeakTests(unittest.TestCase):
         self.assertTrue(out.read_text(encoding="utf-8").startswith("window.PORTFOLIO"))
 
 
+class LeakVariantTests(unittest.TestCase):
+    """The leak check must survive the ways an original term can be disguised."""
+
+    def leaks(self, text, terms, slug="proj"):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        project = tmp / slug
+        project.mkdir()
+        (project / "summary.en.md").write_text(text, encoding="utf-8")
+        return build.find_leaks(tmp, terms)
+
+    def test_case_insensitive(self):
+        self.assertEqual(len(self.leaks("our client CATHAY did", ["Cathay"])), 1)
+
+    def test_wrapped_across_lines_reports_first_line(self):
+        hits = self.leaks("intro\n國泰\n人壽 rest", ["國泰人壽"])
+        self.assertEqual([(h[1], h[2]) for h in hits], [(2, "國泰人壽")])
+
+    def test_full_width_and_spacing(self):
+        self.assertEqual(len(self.leaks("月營收３，２００ 萬", ["月營收 3,200 萬"])), 1)
+
+    def test_markdown_split(self):
+        self.assertEqual(len(self.leaks("**國泰**人壽", ["國泰人壽"])), 1)
+
+    def test_decomposed_unicode(self):
+        self.assertEqual(len(self.leaks("Cafe\u0301 Corp", ["Café Corp"])), 1)
+
+    def test_folder_name_leak(self):
+        hits = self.leaks("clean", ["Cathay"], slug="cathay-crm")
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits[0][0].name, "cathay-crm")
+        self.assertEqual(hits[0][1], 0)
+
+    def test_replacement_marker_is_not_a_leak(self):
+        self.assertEqual(self.leaks("a {{某金融客戶}} b", ["國泰人壽"]), [])
+
+
+class RobustnessTests(unittest.TestCase):
+    def test_non_utf8_summary_names_file_and_fails(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        project = tmp / "projects" / "big5"
+        project.mkdir(parents=True)
+        (project / "summary.md").write_bytes("標題".encode("big5"))
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            code = build.main(["--projects", str(tmp / "projects"), "--out", str(tmp / "d.js"),
+                               "--redactions", str(tmp / "none.md")])
+        self.assertEqual(code, 1)
+        self.assertIn("summary.md", err.getvalue())
+        self.assertIn("UTF-8", err.getvalue())
+
+    def test_missing_redactions_is_announced(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            build.main(["--projects", str(FIXTURES), "--out", str(tmp / "d.js"),
+                        "--redactions", str(tmp / "none.md")])
+        self.assertIn("略過外洩檢查", out.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

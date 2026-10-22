@@ -45,6 +45,8 @@ projects/
       prototype.html
 ```
 
+資料夾名稱會顯示在作品集裡，不要用客戶名稱或內部代號，例如用 `insurer-crm`，不要用 `cathay-crm`。
+
 - **Google Doc（PRD）**：檔案 → 下載 → PDF 文件 (.pdf)。
 - **Google Sheet**：檔案 → 下載 → Microsoft Excel (.xlsx)。不要選 CSV，CSV 只會帶走目前那一個分頁。
 - **HTML 檔**：直接複製進來。

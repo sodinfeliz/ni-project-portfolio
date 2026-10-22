@@ -32,8 +32,11 @@ def extract_docx(path):
     """
     with zipfile.ZipFile(path) as z:
         root = ET.fromstring(z.read("word/document.xml"))
+    body = root.find(f"{W}body")
+    if body is None:
+        raise ValueError("找不到文件內容")
     lines = []
-    for child in root.find(f"{W}body"):
+    for child in body:
         if child.tag == f"{W}p":
             text = _text(child, f"{W}t")
             if text.strip():
@@ -114,8 +117,10 @@ EXTRACTORS = {".docx": extract_docx, ".xlsx": extract_xlsx}
 def extract_project(project_dir):
     """Convert each `.docx` / `.xlsx` directly under `raw/` into `raw/_extracted/`.
 
-    A file whose `.txt` is newer than the source is skipped. Returns the paths
-    written; a project without `raw/` returns an empty list.
+    A file whose `.txt` is newer than the source is skipped. A file that cannot
+    be read (corrupt, encrypted by a sensitivity label, not really Office) is
+    reported on stderr as `無法轉換 <name>：<reason>` and the rest still run.
+    Returns the paths written; a project without `raw/` returns an empty list.
     """
     raw = Path(project_dir) / "raw"
     if not raw.is_dir():
@@ -129,8 +134,17 @@ def extract_project(project_dir):
         target = out_dir / (source.name + ".txt")
         if target.exists() and target.stat().st_mtime >= source.stat().st_mtime:
             continue
+        try:
+            text = extractor(source)
+        except zipfile.BadZipFile:
+            print(f"無法轉換 {source.name}：不是有效的 Office 檔案，可能有加密或敏感度標籤。"
+                  "請改匯出成 PDF。", file=sys.stderr)
+            continue
+        except (KeyError, ValueError, IndexError, ET.ParseError) as error:
+            print(f"無法轉換 {source.name}：檔案內容不完整（{error}）。請改匯出成 PDF。", file=sys.stderr)
+            continue
         out_dir.mkdir(exist_ok=True)
-        target.write_text(extractor(source), encoding="utf-8")
+        target.write_text(text, encoding="utf-8")
         written.append(target)
     return written
 

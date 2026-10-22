@@ -14,11 +14,25 @@ import argparse
 import json
 import re
 import sys
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TODO_RE = re.compile(r"\[\[(?:待補充：|TODO:)")
+# Markdown emphasis characters that can split a term without changing what the page shows.
+IGNORED_CHARS = set("*`_~")
+
+
+class BuildError(Exception):
+    """A problem Ni can fix herself; `main` prints it and exits with 1."""
+
+
+def _read(path):
+    try:
+        return Path(path).read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        raise BuildError(f"{path} 不是 UTF-8 編碼。請用 UTF-8 重新存檔（或請 Claude Code 幫忙轉換）。") from None
 
 
 def parse_summary(text):
@@ -56,7 +70,7 @@ def count_todos(text):
 def _load(path, slug):
     if not path.is_file():
         return None
-    meta, body = parse_summary(path.read_text(encoding="utf-8"))
+    meta, body = parse_summary(_read(path))
     meta.setdefault("title", slug)
     return {"meta": meta, "body": body, "todos": count_todos(body)}
 
@@ -100,7 +114,7 @@ def load_originals(path):
     if not path.is_file():
         return []
     originals = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in _read(path).splitlines():
         line = line.strip()
         if not line.startswith("|"):
             continue
@@ -110,21 +124,53 @@ def load_originals(path):
     return originals
 
 
-def find_leaks(projects_dir, originals):
-    """Find every exact occurrence of an original term in the summaries.
+def _fold(text):
+    """Fold `text` for leak matching and remember the 1-based line of each kept character.
 
-    Scans the full text, frontmatter included, of `summary.md` and
-    `summary.en.md` in every project folder (`_` folders too, so the example
-    cannot leak either). Returns `(file, line, term)` with 1-based lines.
+    Composes Unicode (NFC), maps full-width forms to their plain forms (NFKC),
+    ignores case, and drops whitespace and Markdown emphasis characters, so a
+    term wrapped across lines, typed full-width, or split by `**` still matches.
     """
+    chars, lines, line = [], [], 1
+    for ch in unicodedata.normalize("NFC", text):
+        if ch == "\n":
+            line += 1
+            continue
+        for c in unicodedata.normalize("NFKC", ch).casefold():
+            if not c.isspace() and c not in IGNORED_CHARS:
+                chars.append(c)
+                lines.append(line)
+    return "".join(chars), lines
+
+
+def find_leaks(projects_dir, originals):
+    """Find every original term in the project folder names and summaries.
+
+    Scans each folder's name (reported as line 0, since it reaches the page as
+    the slug) and the full text, frontmatter included, of `summary.md` and
+    `summary.en.md` in every folder (`_` folders too, so the example cannot
+    leak either). Matching uses `_fold`. Returns `(path, line, term)` tuples.
+    """
+    terms = [(term, _fold(term)[0]) for term in originals]
+    terms = [(term, folded) for term, folded in terms if folded]
     leaks = []
     for folder in sorted(Path(projects_dir).iterdir()):
+        if not folder.is_dir():
+            continue
+        folded_name = _fold(folder.name)[0]
+        leaks.extend((folder, 0, term) for term, folded in terms if folded in folded_name)
         for name in ("summary.md", "summary.en.md"):
             path = folder / name
             if not path.is_file():
                 continue
-            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-                leaks.extend((path, number, term) for term in originals if term in line)
+            text, lines = _fold(_read(path))
+            for term, folded in terms:
+                seen, start = set(), text.find(folded)
+                while start != -1:
+                    if lines[start] not in seen:
+                        seen.add(lines[start])
+                        leaks.append((path, lines[start], term))
+                    start = text.find(folded, start + 1)
     return leaks
 
 
@@ -160,11 +206,22 @@ def main(argv=None):
     if not args.projects.is_dir():
         print(f"找不到資料夾：{args.projects}", file=sys.stderr)
         return 1
+    try:
+        return _build(args)
+    except BuildError as error:
+        print(error, file=sys.stderr)
+        return 1
+
+
+def _build(args):
+    if not args.redactions.is_file():
+        print(f"找不到 {args.redactions.name}，略過外洩檢查。")
     leaks = find_leaks(args.projects, load_originals(args.redactions))
     if leaks:
         for path, number, term in leaks:
-            print(f"{path}:{number}: 發現原文「{term}」", file=sys.stderr)
-        print("summary 裡還有未替換的原文，沒有更新 data.js。請先修正上面的檔案再 build。",
+            where = f"資料夾名稱 {path.name}" if number == 0 else f"{path}:{number}"
+            print(f"{where}: 發現原文「{term}」", file=sys.stderr)
+        print("還有未替換的原文，沒有更新 data.js。請先修正上面的檔案或資料夾名稱再 build。",
               file=sys.stderr)
         return 1
     projects = scan_projects(args.projects)

@@ -1,3 +1,5 @@
+import contextlib
+import io
 import os
 import shutil
 import sys
@@ -97,6 +99,20 @@ class ExtractTests(unittest.TestCase):
         extract.extract_project(self.tmp / "proj")
         os.utime(raw / "_extracted" / "prd.docx.txt", (1000, 1000))
         self.assertEqual(len(extract.extract_project(self.tmp / "proj")), 1)
+
+    def test_bad_file_does_not_stop_the_rest(self):
+        raw = self.tmp / "proj" / "raw"
+        raw.mkdir(parents=True)
+        (raw / "a-protected.docx").write_bytes(b"not a zip")
+        make_xlsx(raw / "b.xlsx")
+        with zipfile.ZipFile(raw / "c-empty.docx", "w") as z:
+            z.writestr("other.xml", "<x/>")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            written = extract.extract_project(self.tmp / "proj")
+        self.assertEqual([p.name for p in written], ["b.xlsx.txt"])
+        self.assertIn("無法轉換 a-protected.docx", err.getvalue())
+        self.assertIn("無法轉換 c-empty.docx", err.getvalue())
 
     def test_extract_project_without_raw(self):
         self.assertEqual(extract.extract_project(self.tmp / "empty"), [])
