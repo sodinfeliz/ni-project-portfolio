@@ -4,6 +4,15 @@
 
 你只要做兩件事：把公司文件匯出放進資料夾，然後回答 Claude Code 的問題。讀文件、寫概要、去敏感化、更新網頁，都由 Claude Code 完成。
 
+## 整個流程
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/workflow-dark.png">
+  <img alt="流程圖：你匯出文件，Claude Code 讀取、訪談並寫概要，build.py 檢查外洩後更新作品集" src="docs/images/workflow-light.png">
+</picture>
+
+每一欄是一個階段，每一列是誰在做事。下方的檔案顯示每一步寫出什麼：橘色的只能留在這台電腦，不分享、不同步、不進 git；綠色的已經去敏感化，可以帶出去。圖由 `docs/figures/workflow.py` 產生。
+
 ## 1. Setup
 
 只需要做一次。
