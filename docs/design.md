@@ -46,7 +46,7 @@ ni-project-portfolio/
       summary.en.md         英文概要（output）
   build.py                  掃描 projects/，產生 data.js
   tools/extract.py          把 raw/ 的 .docx/.xlsx 轉成純文字（只用標準函式庫）
-  .gitignore                排除 raw/、context.md、redactions.md
+  .gitignore                排除 projects/（_example 除外）、redactions.md、data.js
   data.js                   build 產物，portfolio.html 用 <script> 載入
   portfolio.html            固定的單一頁面
   docs/design.md            本文件
@@ -129,7 +129,7 @@ README 要提醒 Ni：離職後就會失去公司帳號，所以要在離職前�
 
 可以帶出去或分享的只有 `summary.md`、`summary.en.md`、`data.js`、`portfolio.html`。
 
-工具附 `.gitignore`，排除上述敏感檔案，以防 Ni 之後把資料夾放上 git。README 也要提醒她：不要把這個資料夾放在 iCloud Drive（包括已同步的「桌面」和「文件」）、Dropbox、Google Drive 這類同步資料夾裡，否則 `raw/` 一樣會離開電腦。
+工具附 `.gitignore`，排除整個 `projects/`（只保留虛構的 `_example`）和 `redactions.md`。summary 雖然可以分享，也不進 git（2026-10-22 決定）：這個 repo 只放工具，Ni 的內容屬於她自己，由她自行備份；這也避免沒被列進 `redactions.md` 的敏感詞永久留在 git 歷史裡。README 也要提醒她：不要把這個資料夾放在 iCloud Drive（包括已同步的「桌面」和「文件」）、Dropbox、Google Drive 這類同步資料夾裡，否則 `raw/` 一樣會離開電腦。
 
 ## 8. Output 格式：`summary.md` / `summary.en.md`
 

@@ -28,7 +28,9 @@
 | `projects/<專案>/summary.en.md` | 你 | 否 | 英文概要，已去敏感化 |
 | `data.js` | `build.py` | 否 | 只包含 summary |
 
-敏感的檔案只能留在 Ni 的電腦：不要複製到別處、不要貼到任何網站或其他服務、不要 commit（`.gitignore` 已經排除）。只有 summary、`data.js`、`portfolio.html` 可以帶出去。
+敏感的檔案只能留在 Ni 的電腦：不要複製到別處，也不要貼到任何網站或其他服務。不敏感的 summary、`data.js` 和 `portfolio.html` 可以由 Ni 自己帶出去或分享。
+
+不管敏不敏感，`projects/` 底下的檔案（`_example` 除外）、`redactions.md` 和 `data.js` 都不進 git：這個 repo 只放工具，Ni 的內容由她自己備份。不要把它們加進 git，也不要修改 `.gitignore` 讓它們進去。
 
 ## 整理一個新專案
 
@@ -40,7 +42,7 @@ Ni 說「整理 `<專案名>`」（或類似的話）時，依序做以下七步
 4. **寫 `context.md`**：照 `templates/context.md` 的格式整理回答，先把內容給 Ni 看，她確認後才存到 `projects/<專案名>/context.md`。
 5. **寫 `summary.md`（中文）**：來源只有 `raw/` 和 `context.md`。套用「去敏感化規則」，照「summary 格式」寫。給 Ni 看過、確認後才存檔。
 6. **寫 `summary.en.md`（英文）**：從確認後的中文版產生。不要逐字翻譯，要改寫成英文面試的講法。同一個詞在中英兩份裡都要用 `{{…}}` 標記。
-7. **Build**：執行 `python3 build.py`，把結果（共幾個專案、這個專案缺幾項待補充）告訴 Ni，並提醒她打開 `portfolio.html` 看。
+7. **Build**：執行 `python3 build.py`，把結果（共幾個專案、這個專案缺幾項待補充）告訴 Ni，並提醒她打開 `portfolio.html` 看。如果這是她整理好的第一個專案，再提醒一次：summary 不在 git 裡，要自己定期把 `summary.md` 和 `summary.en.md` 備份到別處（不要備份 `raw/`、`context.md`、`redactions.md`）。之後不用每次提醒。
 
 ## 更新既有專案
 

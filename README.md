@@ -11,7 +11,7 @@
   <img alt="流程圖：你匯出文件，Claude Code 讀取、訪談並寫概要，build.py 檢查外洩後更新作品集" src="docs/images/workflow-light.png">
 </picture>
 
-每一欄是一個階段，每一列是誰在做事。下方的檔案顯示每一步寫出什麼：橘色的只能留在這台電腦，不分享、不同步、不進 git；綠色的已經去敏感化，可以帶出去。圖由 `docs/figures/workflow.py` 產生。
+每一欄是一個階段，每一列是誰在做事。下方的檔案顯示每一步寫出什麼：橘色的只能留在這台電腦，不分享、不同步；綠色的已經去敏感化，可以帶出去。兩種都不會進 git，見「安全提醒」。圖由 `docs/figures/workflow.py` 產生。
 
 ## 1. Setup
 
@@ -91,7 +91,7 @@ projects/
 - 黃色標籤是待補充的地方；淡紫色底的字是去敏感化替換過的詞，滑鼠移上去會顯示「已替換」。
 - 每個專案最後的「面試追問」排成問答卡，先看問題自己回答一遍，再看下面的回答重點。
 
-網頁內容是從 `data.js` 來的。如果你自己改了概要，網頁沒有更新，請 Claude Code 跑一次 build，或在終端機執行：
+網頁內容是從 `data.js` 來的，它由 `build.py` 產生、不在 git 裡。第一次打開時如果看到「找不到 data.js」，或你自己改了概要、網頁沒有更新，請 Claude Code 跑一次 build，或在終端機執行：
 
 ```bash
 python3 build.py
@@ -105,5 +105,6 @@ python3 build.py
   - 各專案的 `context.md`：訪談原話，沒有去敏感化；
   - `redactions.md`：敏感詞的原文清單。
 - `build.py` 會檢查概要裡有沒有殘留 `redactions.md` 裡的原文，有的話會拒絕更新網頁，並告訴你是哪一行。
-- 這個資料夾如果放上 git，上面三種敏感檔案已經被 `.gitignore` 排除；不要用 `git add -f` 強制加入。
+- `projects/` 裡的所有東西（包括概要）和 `redactions.md` 都不會進 git，`.gitignore` 已經排除；不要用 `git add -f` 強制加入。
+- **所以請自己備份概要**：定期把各專案的 `summary.md`、`summary.en.md` 複製到隨身碟或你自己的雲端資料夾。不要備份 `raw/`、`context.md`、`redactions.md`。
 - 公司對帶走文件的規定，請自己確認。
